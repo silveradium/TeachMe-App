@@ -1,0 +1,154 @@
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useRouter } from "next/router";
+import { forwardRef, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import Button from "~/components/ui/Button/Button";
+import { classNames } from "~/lib/classNames";
+import type { SVGComponent } from "~/types/SVGComponent";
+
+interface DialogProps extends ComponentProps<(typeof DialogPrimitive)["Root"]> {
+  name?: string;
+  clearQueryParamsOnClose?: string[];
+}
+
+export default function Dialog(props: DialogProps) {
+  const router = useRouter();
+  const { children, name, ...dialogProps } = props;
+  // only used if name is set
+  const [open, setOpen] = useState(!!dialogProps.open);
+
+  if (name) {
+    const clearQueryParamsOnClose = ["dialog", ...(props.clearQueryParamsOnClose || [])];
+    dialogProps.onOpenChange = (open) => {
+      if (props.onOpenChange) {
+        props.onOpenChange(open);
+      }
+      // toggles "dialog" query param
+      if (open) {
+        router.query["dialog"] = name;
+      } else {
+        const query = router.query;
+        clearQueryParamsOnClose.forEach((queryParam) => {
+          delete query[queryParam];
+        });
+        void router.push(
+          {
+            pathname: router.pathname,
+            query,
+          },
+          undefined,
+          { shallow: true }
+        );
+      }
+      setOpen(open);
+    };
+    // handles initial state
+    if (!open && router.query["dialog"] === name) {
+      setOpen(true);
+    }
+    // allow overriding
+    if (!("open" in dialogProps)) {
+      dialogProps.open = open;
+    }
+  }
+
+  return <DialogPrimitive.Root {...dialogProps}>{children}</DialogPrimitive.Root>;
+}
+interface DialogContentProps extends ComponentProps<(typeof DialogPrimitive)["Content"]> {
+  size?: "xl" | "lg" | "md";
+  type?: "creation" | "confirmation";
+  title?: string;
+  description?: string | JSX.Element | undefined;
+  closeText?: string;
+  actionDisabled?: boolean;
+  Icon?: SVGComponent;
+  enableOverflow?: boolean;
+}
+
+// enableOverflow:- use this prop whenever content inside DialogContent could overflow and require scrollbar
+export const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
+  ({ children, title, Icon, enableOverflow, type = "creation", ...props }, forwardedRef) => {
+    return (
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fadeIn fixed inset-0 z-50 bg-neutral-800 bg-opacity-70 transition-opacity dark:bg-opacity-70 " />
+        <DialogPrimitive.Content
+          {...props}
+          className={classNames(
+            "fadeIn bg-default fixed left-1/2 top-1/2 z-50 w-full max-w-[22rem] -translate-x-1/2 -translate-y-1/2 rounded text-left shadow-xl focus-visible:outline-none sm:align-middle",
+            props.size == "xl"
+              ? "p-8 sm:max-w-[90rem]"
+              : props.size == "lg"
+              ? "p-8 sm:max-w-[70rem]"
+              : props.size == "md"
+              ? "p-8 sm:max-w-[48rem]"
+              : "p-8 sm:max-w-[35rem]",
+            "max-h-[95vh]",
+            enableOverflow ? "overflow-auto" : "overflow-visible",
+            `${props.className || ""}`
+          )}
+          ref={forwardedRef}>
+          {type === "creation" && (
+            <div>
+              <DialogHeader title={title} subtitle={props.description} />
+              <div className="flex flex-col space-y-6">{children}</div>
+            </div>
+          )}
+          {type === "confirmation" && (
+            <div className="flex">
+              {Icon && (
+                <div className="mr-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-300">
+                  <Icon className="text-emphasis h-4 w-4" />
+                </div>
+              )}
+              <div className="w-full">
+                <DialogHeader title={title} subtitle={props.description} />
+                <div className="flex flex-col space-y-6">{children}</div>
+              </div>
+            </div>
+          )}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    );
+  }
+);
+
+interface DialogHeaderProps {
+  title: ReactNode;
+  subtitle?: ReactNode;
+}
+
+function DialogHeader(props: DialogHeaderProps) {
+  if (!props.title) return null;
+
+  return (
+    <div className="mb-4">
+      <h3 className="leading-20 pb-1 text-xl font-semibold">{props.title}</h3>
+      {props.subtitle && <div className="text-subtle text-sm">{props.subtitle}</div>}
+    </div>
+  );
+}
+
+export function DialogFooter(props: { children: ReactNode }) {
+  return <div className="mt-7 flex justify-end space-x-2 rtl:space-x-reverse ">{props.children}</div>;
+}
+
+DialogContent.displayName = "DialogContent";
+
+export const DialogTrigger = DialogPrimitive.Trigger;
+
+export function DialogClose(
+  props: {
+    dialogCloseProps?: ComponentProps<(typeof DialogPrimitive)["Close"]>;
+    children?: ReactNode;
+    onClick?: (e: MouseEvent<HTMLElement, MouseEvent>) => void;
+    disabled?: boolean;
+  } & ComponentProps<typeof Button>
+) {
+  return (
+    <DialogPrimitive.Close asChild {...props.dialogCloseProps}>
+      {/* This will require the i18n string passed in */}
+      <Button size="sm" {...props}>
+        {props.children ? props.children : "Close"}
+      </Button>
+    </DialogPrimitive.Close>
+  );
+}

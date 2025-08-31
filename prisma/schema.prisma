@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mongodb"
+    // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url      = env("DATABASE_URL")
+}
+
+// Necessary for Next auth
+model Account {
+    id                 String  @id @default(auto()) @map("_id") @db.ObjectId
+    userId             String  @db.ObjectId
+    type               String
+    provider           String
+    providerAccountId  String
+    refresh_token      String?
+    access_token       String?
+    expires_at         Int?
+    token_type         String?
+    scope              String?
+    id_token           String?
+    session_state      String?
+    oauth_token_secret String?
+    oauth_token        String?
+
+    user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+    @@map("accounts")
+}
+
+model Session {
+    id           String   @id @default(auto()) @map("_id") @db.ObjectId
+    sessionToken String   @unique
+    userId       String   @db.ObjectId
+    expires      DateTime
+    user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("sessions")
+}
+
+enum UserStatus {
+    PENDING
+    ACTIVE
+}
+
+enum HighestEducationalExperience {
+    LESS_THAN_HIGH_SCHOOL_DIPLOMA
+    HIGH_SCHOOL_DIPLOMA
+    SOME_COLLEGE_NO_DEGREE
+    ASSOCIATES_DEGREE
+    BACHELORS_DEGREE
+    MASTERS_DEGREE
+    PROFESSIONAL_DEGREE
+    DOCTORATE
+}
+
+enum IdentityProvider {
+    TEACHME
+    GOOGLE
+}
+
+model User {
+    id                           String                        @id @default(auto()) @map("_id") @db.ObjectId
+    name                         String?
+    email                        String                        @unique
+    emailVerified                DateTime?
+    password                     String?
+    status                       UserStatus                    @default(PENDING)
+    avatar                       String?
+    highestEducationalExperience HighestEducationalExperience?
+    interestedTopics             String[]                      @default([])
+    points                       Int                           @default(0)
+    activeSessionRecordId        String?                       @db.ObjectId
+    identityProvider             IdentityProvider              @default(TEACHME)
+    identityProviderId           String?
+    createdAt                    DateTime                      @default(now())
+    updatedAt                    DateTime                      @updatedAt
+    accounts                     Account[]
+    sessions                     Session[]
+    sessionRecords               SessionRecord[]
+
+    @@map(name: "users")
+}
+
+type SessionRecordQuestion {
+    id      String @map("_id") @db.ObjectId
+    payload String
+}
+
+enum SessionRecordAnswerGrade {
+    A
+    B
+    C
+    D
+    F
+}
+
+type SessionRecordAnswer {
+    id          String                   @map("_id") @db.ObjectId
+    questionId  String                   @db.ObjectId
+    payload     String
+    score       Int
+    review      String
+    modelAnswer String?
+    grade       SessionRecordAnswerGrade
+}
+
+enum SessionRecordStatus {
+    PENDING
+    STARTED
+    FINISHED
+}
+
+model SessionRecord {
+    id                   String                  @id @default(auto()) @map("_id") @db.ObjectId
+    userId               String                  @db.ObjectId
+    status               SessionRecordStatus     @default(PENDING)
+    topic                String?
+    score                Int?
+    currentQuestionIndex Int?
+    createdAt            DateTime                @default(now())
+    updatedAt            DateTime                @updatedAt
+    questions            SessionRecordQuestion[]
+    answers              SessionRecordAnswer[]
+
+    user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("sessionRecords")
+}

@@ -1,0 +1,9 @@
+.container {
+  > input:only-of-type {
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+}

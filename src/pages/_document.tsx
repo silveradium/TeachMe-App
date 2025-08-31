@@ -1,0 +1,63 @@
+import type { DocumentContext, DocumentProps } from "next/document";
+import Document, { Head, Html, Main, NextScript } from "next/document";
+import { z } from "zod";
+import { csp } from "~/lib/csp";
+
+type Props = Record<string, unknown> & DocumentProps;
+
+class MyDocument extends Document<Props> {
+  static async getInitialProps(ctx: DocumentContext) {
+    const { nonce } = csp(ctx.req || null, ctx.res || null);
+    if (!process.env.CSP_POLICY) {
+      ctx.res?.setHeader("x-csp", "not-opted-in");
+    } else if (!ctx.res?.getHeader("x-csp")) {
+      // If x-csp not set by gSSP, then it's initialPropsOnly
+      ctx.res?.setHeader("x-csp", "initialPropsOnly");
+    }
+    const asPath = ctx.asPath || "";
+    // Use a dummy URL as default so that URL parsing works for relative URLs as well. We care about searchParams and pathname only
+    const parsedUrl = new URL(asPath, "https://dummyurl");
+    const isEmbed = parsedUrl.pathname.endsWith("/embed") || parsedUrl.searchParams.get("embedType") !== null;
+    const initialProps = await Document.getInitialProps(ctx);
+    return { isEmbed, nonce, ...initialProps };
+  }
+
+  render() {
+    const { isEmbed } = this.props;
+    const nonceParsed = z.string().safeParse(this.props.nonce);
+    const nonce = nonceParsed.success ? nonceParsed.data : "";
+    return (
+      <Html lang="en-UK" dir="ltr">
+        <Head nonce={nonce}>
+          <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+          <link rel="manifest" href="/site.webmanifest" />
+          <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#000000" />
+          <meta name="msapplication-TileColor" content="#E82530" />
+          <meta name="theme-color" content="#E82530" />
+        </Head>
+
+        <body
+          className="bg-gray-50 antialiased dark:bg-gray-900"
+          style={
+            isEmbed
+              ? {
+                  background: "transparent",
+                  // Keep the embed hidden till parent initializes and
+                  // - gives it the appropriate styles if UI instruction is there.
+                  // - gives iframe the appropriate height(equal to document height) which can only be known after loading the page once in browser.
+                  // - Tells iframe which mode it should be in (dark/light) - if there is a a UI instruction for that
+                  visibility: "hidden",
+                }
+              : {}
+          }>
+          <Main />
+          <NextScript nonce={nonce} />
+        </body>
+      </Html>
+    );
+  }
+}
+
+export default MyDocument;

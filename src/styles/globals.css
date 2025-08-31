@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --white: 255, 255, 255;
+  --blue: 0, 153, 255;
+  --green: 70, 217, 155;
+  --dark-red: 214, 6, 32;
+  --very-light-gray: 248, 248, 248;
+  --light-gray: 240, 240, 247;
+  --medium-gray: 186, 191, 207;
+  --dark-gray: 77, 79, 92;
+  --light-text: 142, 140, 140;
+  --medium-text: 124, 124, 124;
+  --dark-text: 43, 42, 42;
+}
+
+body {
+  color: rgb(var(--dark-text));
+}

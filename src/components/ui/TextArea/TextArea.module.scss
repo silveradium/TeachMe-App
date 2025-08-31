@@ -1,0 +1,14 @@
+textarea.container {
+  width: 100%;
+  color: rgb(var(--dark-text));
+
+  &::placeholder {
+    color: rgb(var(--light-text));
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+}

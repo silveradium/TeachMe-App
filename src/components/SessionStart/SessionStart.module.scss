@@ -1,0 +1,11 @@
+button.next-button {
+  color: rgb(var(--medium-text));
+
+  &:hover {
+    color: rgb(var(--dark-text));
+  }
+
+  &:disabled {
+    color: rgb(var(--light-text));
+  }
+}
